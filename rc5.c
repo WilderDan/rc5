@@ -32,27 +32,27 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* RC5 works with words; let's emphasize this. Here is 32-bit */
+// RC5 works with words; let's emphasize this. Here is 32-bit 
 typedef unsigned int WORD;
 
-/* Encryption Parameters */
+// Encryption Parameters 
 #define w 32
 #define r 12
 #define b 8
 #define t 26
 #define c 2
 
-/* Rotation Operator */
+// Rotation Operator
 #define ROTATE_L(x,y) (((x)<<(y&(w-1))) | ((x)>>(w-(y&(w-1)))))
 
-/* Magic Constants */
+// Magic Constants
 WORD P = 0xb7e15163;
 WORD Q = 0x9e3779b9;
 
-/* Expanded Key Table */ 
+// Expanded Key Table 
 WORD S[t];
 
-/* Prototypes */
+// Prototypes
 void setup(unsigned char *);
 void encrypt(unsigned int *, unsigned int *);
 
@@ -63,6 +63,10 @@ void encrypt(unsigned int *, unsigned int *);
 int main(int argc, char **argv) {
   
   unsigned char K[b]; 
+  char byte;
+  WORD block[2];
+  //WORD outBlock[2];
+  int cnt, i, j;
  
   if (argc < 2) { 
     printf("Key not supplied... Exiting!\n");
@@ -72,8 +76,29 @@ int main(int argc, char **argv) {
   strncpy(K, argv[1], sizeof(K));
 
   setup(K);
+  
+  cnt = i = j = 0;
+  while ( (byte = getchar()) != EOF ) {
+    
+    ++cnt;
+    
+    // i in interval [0,3]; Alternate block index, j, every 4 characters
+    if (i == 4) {
+      i = 0;
+      j = (j == 0) ? 1 : 0;
+    }
 
-  puts("Working! :)");
+    block[j] += ROTATE_L(byte, i*8);
+
+    // Encrypt after every 8 characters
+    if (cnt % 8 == 0) {
+      // Encrypt...
+      printf("block[%d] += ROTATE_L(byte, %d*8)", j, i);
+    }
+    
+    ++i;     
+  }
+  
   return 0;
 }
 
