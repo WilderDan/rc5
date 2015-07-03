@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-// RC5 works with words; let's emphasize this. Here is 32-bit 
+// RC5 works with words; let's emphasize this. Here is 32-bit word
 typedef unsigned int WORD;
 
 // Encryption Parameters 
@@ -64,8 +64,8 @@ int main(int argc, char **argv) {
   
   unsigned char K[b]; 
   char byte;
-  WORD block[2];
-  //WORD outBlock[2];
+  WORD block[2] = {0,0};
+  WORD outBlock[2] = {0,0};
   int cnt, i, j;
  
   if (argc < 2) { 
@@ -87,17 +87,29 @@ int main(int argc, char **argv) {
       i = 0;
       j = (j == 0) ? 1 : 0;
     }
-
     block[j] += ROTATE_L(byte, i*8);
-
+ 
     // Encrypt after every 8 characters
     if (cnt % 8 == 0) {
-      // Encrypt...
-      printf("block[%d] += ROTATE_L(byte, %d*8)", j, i);
+      encrypt(block, outBlock);
+      printf("%.8X %.8X\n", outBlock[0], outBlock[1]);
+      block[0] = 0; 
+      block[1] = 0;
     }
     
-    ++i;     
+    ++i;  
   }
+
+#if 1
+  // Last block
+  if (cnt % 8 != 0) {
+    encrypt(block, outBlock);
+    printf("%.8X %.8X\n", outBlock[0], outBlock[1]);
+  }
+#endif
+
+  // Debug
+  printf("[cnt = %d : cnt (mod 8) = %d]\n", cnt, cnt%8);
   
   return 0;
 }
