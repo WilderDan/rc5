@@ -42,8 +42,9 @@ typedef unsigned int WORD;
 #define t 26
 #define c 2
 
-// Rotation Operator
+// Rotation Operators
 #define ROTATE_L(x,y) (((x)<<(y&(w-1))) | ((x)>>(w-(y&(w-1)))))
+#define ROTATE_R(x,y) (((x)>>(y&(w-1))) | ((x)<<(w-(y&(w-1)))))
 
 // Magic Constants
 WORD P = 0xb7e15163;
@@ -54,7 +55,8 @@ WORD S[t];
 
 // Prototypes
 void setup(unsigned char *);
-void encrypt(unsigned int *, unsigned int *);
+void encrypt(WORD *, WORD *);
+void decrypt(WORD *, WORD *);
 
 /****************************************************************************
  * main
@@ -64,52 +66,64 @@ int main(int argc, char **argv) {
   
   unsigned char K[b]; 
   char byte;
-  WORD block[2] = {0,0};
-  WORD outBlock[2] = {0,0};
+  WORD plainTxt[2] = {0,0};
+  WORD cipherTxt[2] = {0,0};
   int cnt, i, j;
  
   if (argc < 2) { 
     printf("Key not supplied... Exiting!\n");
     exit(1);
   }
-  
+
+  // Hex key???
   strncpy(K, argv[1], sizeof(K));
 
   setup(K);
   
-  cnt = i = j = 0;
+  cnt = j = 0;
+  i = 3;
   while ( (byte = getchar()) != EOF ) {
     
     ++cnt;
     
     // i in interval [0,3]; Alternate block index, j, every 4 characters
-    if (i == 4) {
-      i = 0;
+    if (i == -1) {
+      i = 3;
       j = (j == 0) ? 1 : 0;
     }
-    block[j] += ROTATE_L(byte, i*8);
+    plainTxt[j] += ROTATE_L(byte, i*8);
  
     // Encrypt after every 8 characters
     if (cnt % 8 == 0) {
-      encrypt(block, outBlock);
-      printf("%.8X %.8X\n", outBlock[0], outBlock[1]);
-      block[0] = 0; 
-      block[1] = 0;
+      encrypt(plainTxt, cipherTxt);
+      printf("[CIPHER] %.8X %.8X\n", cipherTxt[0], cipherTxt[1]);
+      
+      #if 1  // Decryption
+        decrypt(cipherTxt, plainTxt);
+        printf("[PLAIN] %.8X %.8X\n", plainTxt[0], plainTxt[1]);
+      #endif
+
+      plainTxt[0] = 0; 
+      plainTxt[1] = 0;
     }
     
-    ++i;  
+    --i;  
   }
 
-#if 1
-  // Last block
+  // Encrypt any remaining characters
   if (cnt % 8 != 0) {
-    encrypt(block, outBlock);
-    printf("%.8X %.8X\n", outBlock[0], outBlock[1]);
-  }
-#endif
+    encrypt(plainTxt, cipherTxt);
+    printf("[CIPHER] %.8X %.8X\n", cipherTxt[0], cipherTxt[1]);
 
-  // Debug
-  printf("[cnt = %d : cnt (mod 8) = %d]\n", cnt, cnt%8);
+    #if 1  // Decryption
+      decrypt(cipherTxt, plainTxt);
+      printf("[PLAIN] %.8X %.8X\n", plainTxt[0], plainTxt[1]);
+    #endif
+  }
+
+#if 0  // Debugging
+  printf("[cnt = %d : cnt (mod 8) =  %d ]\n", cnt, cnt%8);
+#endif
   
   return 0;
 }
@@ -125,8 +139,9 @@ void setup(unsigned char *K) {
   int i, j, h; 
  
   // Copy secret key into L
-  for(i = b-1; i >= 0; --i) 
+  for(i = b-1, L[c-1]=0; i != -1; --i) 
     L[i/u] = (L[i/u] << 8) + K[i];
+    //L[i/u] = ROTATE_L(L[i/u], 8) + K[i];
 
   // Initialize Array S
   for (S[0] = P, i = 1; i < t; ++i)
@@ -143,10 +158,10 @@ void setup(unsigned char *K) {
  * encrypt
  ****************************************************************************/
 
-void encrypt(WORD *input, WORD *output) {
+void encrypt(WORD *plainTxt, WORD *cipherTxt) {
  
-  WORD A = input[0] + S[0];
-  WORD B = input[1] + S[1];
+  WORD A = plainTxt[0] + S[0];
+  WORD B = plainTxt[1] + S[1];
 
   int i;
   for (i = 1; i <= r; i++) {
@@ -154,6 +169,28 @@ void encrypt(WORD *input, WORD *output) {
     B = ROTATE_L(B^A, A) + S[2*i+1];
   }
 
-  output[0] = A;
-  output[1] = B;
+  cipherTxt[0] = A;
+  cipherTxt[1] = B;
+}
+
+/****************************************************************************
+ * decrypt
+ ****************************************************************************/
+/*
+ *   Not a project requirement. Implemented for testing and self inquiry.
+ */
+
+void decrypt(WORD *cipherTxt, WORD *plainTxt) {
+ 
+  WORD B = cipherTxt[1];
+  WORD A = cipherTxt[0];
+  
+  int i;
+  for (i = r; i > 0; --i) {
+    B = ROTATE_R(B-S[2*i+1], A)^A;
+    A = ROTATE_R(A-S[2*i], B)^B;
+  } 
+
+  plainTxt[1] = B - S[1]; 
+  plainTxt[0] = A - S[0];
 }
