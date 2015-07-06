@@ -50,10 +50,13 @@ typedef unsigned int WORD;
 WORD P = 0xb7e15163;
 WORD Q = 0x9e3779b9;
 
-// Expanded Key Table 
+// Key & Expanded Key Table
+unsigned char K[b]; 
 WORD S[t];
 
 // Prototypes
+int isBigEndian();
+void setHexKey(char *);
 void setup(unsigned char *);
 void encrypt(WORD *, WORD *);
 void decrypt(WORD *, WORD *);
@@ -64,41 +67,56 @@ void decrypt(WORD *, WORD *);
 
 int main(int argc, char **argv) {
   
-  unsigned char K[b]; 
   char byte;
+  int cnt, i, h, j, bigEndian;
   WORD plainTxt[2] = {0,0};
   WORD cipherTxt[2] = {0,0};
-  int cnt, i, j;
  
+// Some basic error checking
   if (argc < 2) { 
     printf("Key not supplied... Exiting!\n");
     exit(1);
   }
 
-  // Hex key???
-  strncpy(K, argv[1], sizeof(K));
+  if (strlen(argv[1]) > 2*b) {
+    printf("Key exceeded %d hex characters... Exiting!\n", 2*b);
+    exit(1);
+  }
+    
+  setHexKey(argv[1]);
+
+#if 0 // Debugging: Print key
+  printf("0x ");
+  for (i=0; i < b; i++) {
+    printf("%02x ", K[i]);
+  }
+#endif
+
+  bigEndian = isBigEndian();
 
   setup(K);
   
-  cnt = j = 0;
-  i = 3;
+  cnt = i = j = 0;
+  h = 3; 
   while ( (byte = getchar()) != EOF ) {
     
     ++cnt;
     
-    // i in interval [0,3]; Alternate block index, j, every 4 characters
-    if (i == -1) {
-      i = 3;
+    // i in interval [0,3]; Alternate plainTxt index, j, every 4 characters
+    if (i == 4) {
+      i = 0;
+      h = 3;
       j = (j == 0) ? 1 : 0;
     }
-    plainTxt[j] += ROTATE_L(byte, i*8);
- 
+
+    plainTxt[j] += (bigEndian) ? ROTATE_L(byte, i*8) : ROTATE_L(byte, h*8);
+
     // Encrypt after every 8 characters
     if (cnt % 8 == 0) {
       encrypt(plainTxt, cipherTxt);
-      printf("[CIPHER] %.8X %.8X\n", cipherTxt[0], cipherTxt[1]);
+      printf("%.8X %.8X\n", cipherTxt[0], cipherTxt[1]);
       
-      #if 1  // Decryption
+      #if 0  // Decryption
         decrypt(cipherTxt, plainTxt);
         printf("[PLAIN] %.8X %.8X\n", plainTxt[0], plainTxt[1]);
       #endif
@@ -107,21 +125,22 @@ int main(int argc, char **argv) {
       plainTxt[1] = 0;
     }
     
-    --i;  
+    ++i;  
+    --h;
   }
 
   // Encrypt any remaining characters
   if (cnt % 8 != 0) {
     encrypt(plainTxt, cipherTxt);
-    printf("[CIPHER] %.8X %.8X\n", cipherTxt[0], cipherTxt[1]);
+    printf("%.8X %.8X\n", cipherTxt[0], cipherTxt[1]);
 
-    #if 1  // Decryption
+    #if 0  // Decryption
       decrypt(cipherTxt, plainTxt);
       printf("[PLAIN] %.8X %.8X\n", plainTxt[0], plainTxt[1]);
     #endif
   }
 
-#if 0  // Debugging
+#if 0  // Debugging: character count
   printf("[cnt = %d : cnt (mod 8) =  %d ]\n", cnt, cnt%8);
 #endif
   
@@ -193,4 +212,43 @@ void decrypt(WORD *cipherTxt, WORD *plainTxt) {
 
   plainTxt[1] = B - S[1]; 
   plainTxt[0] = A - S[0];
+}
+
+/****************************************************************************
+ * setHexKey
+ ****************************************************************************/
+/*
+ *  IMPORTANT: Make sure that parameter source len is <= 2*b. 
+ */
+
+void setHexKey(char *source) {
+  
+    char target[2*b];
+    char *p = target;
+    int i, j, offset;
+ 
+    offset = 2*b - strlen(source);
+
+    for ( i = 0; i < 2*b; ++i)
+      target[i] = '0'; 
+
+    for ( i = j = 0; i + offset < 2*b; ++i, ++j)
+      target[i + offset] = source[j];
+
+    for(i = 0; i < b; ++i) {
+        sscanf(p, "%2hhx", &K[i]);
+        p += 2 * sizeof(char);
+    }
+}
+
+/****************************************************************************
+ * isBigEndian
+ ****************************************************************************/
+
+int isBigEndian() {
+  if ( htonl(47) == 47 ) {
+    return 1;
+  } else {
+    return 0;
+  }
 }
