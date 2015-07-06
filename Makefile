@@ -1,8 +1,8 @@
 CC=gcc
 CFLAGS=-c -g
 
-SOURCES=$(wildcard *.c)
-OBJECTS=$(SOURCES:.c=.o)
+SOURCES=rc5.c
+OBJECTS=rc5.o
 
 EXECUTABLE=rc5
 

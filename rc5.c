@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <arpa/inet.h>
 
 // RC5 works with words; let's emphasize this. Here is 32-bit word
 typedef unsigned int WORD;
@@ -68,9 +69,14 @@ void decrypt(WORD *, WORD *);
 int main(int argc, char **argv) {
   
   char byte;
-  int cnt, i, h, j, bigEndian;
+  int cnt, i, j;
   WORD plainTxt[2] = {0,0};
   WORD cipherTxt[2] = {0,0};
+
+#if 1 // Debugging: Print endianness
+  (isBigEndian()) ? printf("*** Big Endian ***\n") :
+    printf("*** Little Endian ***\n");
+#endif
  
 // Some basic error checking
   if (argc < 2) { 
@@ -85,48 +91,45 @@ int main(int argc, char **argv) {
     
   setHexKey(argv[1]);
 
-#if 0 // Debugging: Print key
-  printf("0x ");
+#if 1 // Debugging: Print key
+  printf("[HEX KEY] 0x: ");
   for (i=0; i < b; i++) {
     printf("%02x ", K[i]);
   }
+  puts("");
 #endif
-
-  bigEndian = isBigEndian();
 
   setup(K);
   
-  cnt = i = j = 0;
-  h = 3; 
+  cnt = j = 0;
+  i = 3; 
   while ( (byte = getchar()) != EOF ) {
     
     ++cnt;
     
     // i in interval [0,3]; Alternate plainTxt index, j, every 4 characters
-    if (i == 4) {
-      i = 0;
-      h = 3;
+    if (i == -1) {
+      i = 3;
       j = (j == 0) ? 1 : 0;
     }
 
-    plainTxt[j] += (bigEndian) ? ROTATE_L(byte, i*8) : ROTATE_L(byte, h*8);
+    plainTxt[j] += ROTATE_L(byte, i*8);
 
     // Encrypt after every 8 characters
     if (cnt % 8 == 0) {
       encrypt(plainTxt, cipherTxt);
       printf("%.8X %.8X\n", cipherTxt[0], cipherTxt[1]);
       
-      #if 0  // Decryption
+      #if 1  // Decryption
         decrypt(cipherTxt, plainTxt);
-        printf("[PLAIN] %.8X %.8X\n", plainTxt[0], plainTxt[1]);
+        printf("[PLAIN HEX] %.8X %.8X\n", plainTxt[0], plainTxt[1]);
       #endif
 
       plainTxt[0] = 0; 
       plainTxt[1] = 0;
     }
-    
-    ++i;  
-    --h;
+      
+    --i;
   }
 
   // Encrypt any remaining characters
@@ -134,13 +137,13 @@ int main(int argc, char **argv) {
     encrypt(plainTxt, cipherTxt);
     printf("%.8X %.8X\n", cipherTxt[0], cipherTxt[1]);
 
-    #if 0  // Decryption
+    #if 1  // Decryption
       decrypt(cipherTxt, plainTxt);
-      printf("[PLAIN] %.8X %.8X\n", plainTxt[0], plainTxt[1]);
+      printf("[PLAIN HEX] %.8X %.8X\n", plainTxt[0], plainTxt[1]);
     #endif
   }
 
-#if 0  // Debugging: character count
+#if 0   // Debugging: character count
   printf("[cnt = %d : cnt (mod 8) =  %d ]\n", cnt, cnt%8);
 #endif
   
