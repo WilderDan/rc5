@@ -62,6 +62,8 @@ void setup(unsigned char *);
 void encrypt(WORD *, WORD *);
 void decrypt(WORD *, WORD *);
 
+#define DEBUG
+
 /****************************************************************************
  * main
  ****************************************************************************/
@@ -73,7 +75,7 @@ int main(int argc, unsigned char **argv) {
   WORD plainTxt[2] = {0,0};
   WORD cipherTxt[2] = {0,0};
 
-#if 1 // Debugging: Print endianness
+#ifdef DEBUG
   (isBigEndian()) ? printf("*** Big Endian ***\n") :
     printf("*** Little Endian ***\n\n");
 #endif
@@ -91,7 +93,7 @@ int main(int argc, unsigned char **argv) {
     
   setHexKey(argv[1]);
 
-#if 1 // Debugging: Print key
+#if DEBUG 
   printf("[HEX KEY] 0x: ");
   for (i=0; i < b; i++) {
     printf("%02x ", K[i]);
@@ -136,13 +138,12 @@ int main(int argc, unsigned char **argv) {
     encrypt(plainTxt, cipherTxt);
     printf("[CIPHER HEX] %.8X %.8X\n", cipherTxt[0], cipherTxt[1]);
 
-    #if 1  // Decryption
-      decrypt(cipherTxt, plainTxt);
-      printf("[PLAIN HEX ] %.8X %.8X\n\n", plainTxt[0], plainTxt[1]);
-    #endif
+    decrypt(cipherTxt, plainTxt);
+    printf("[PLAIN HEX ] %.8X %.8X\n\n", plainTxt[0], plainTxt[1]);
+    
   }
 
-#if 0   // Debugging: character count
+#if DEBUG
   printf("[cnt = %d : cnt (mod 8) =  %d ]\n", cnt, cnt%8);
 #endif
   
