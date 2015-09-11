@@ -40,7 +40,7 @@ typedef unsigned int WORD;
 #define w 32
 #define r 12
 #define b 8
-#define t 26
+#define t 24
 #define c 2
 
 // Rotation Operators
@@ -57,7 +57,7 @@ WORD S[t];
 
 // Prototypes
 int isBigEndian();
-void setHexKey(char *);
+void setHexKey(unsigned char *);
 void setup(unsigned char *);
 void encrypt(WORD *, WORD *);
 void decrypt(WORD *, WORD *);
@@ -66,7 +66,7 @@ void decrypt(WORD *, WORD *);
  * main
  ****************************************************************************/
 
-int main(int argc, char **argv) {
+int main(int argc, unsigned char **argv) {
   
   char byte;
   int cnt, i, j;
@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
 
 #if 1 // Debugging: Print endianness
   (isBigEndian()) ? printf("*** Big Endian ***\n") :
-    printf("*** Little Endian ***\n");
+    printf("*** Little Endian ***\n\n");
 #endif
  
 // Some basic error checking
@@ -96,50 +96,49 @@ int main(int argc, char **argv) {
   for (i=0; i < b; i++) {
     printf("%02x ", K[i]);
   }
-  puts("");
+  puts("\n");
 #endif
 
   setup(K);
   
-  cnt = j = 0;
-  i = 3; 
+  cnt = i = j = 0;
   while ( (byte = getchar()) != EOF ) {
     
     ++cnt;
     
     // i in interval [0,3]; Alternate plainTxt index, j, every 4 characters
-    if (i == -1) {
-      i = 3;
+    if (i == 4) {
+      i = 0;
       j = (j == 0) ? 1 : 0;
     }
 
-    plainTxt[j] += ROTATE_L(byte, i*8);
+    plainTxt[j] += (unsigned int)ROTATE_L(byte, i*8);
 
     // Encrypt after every 8 characters
     if (cnt % 8 == 0) {
       encrypt(plainTxt, cipherTxt);
-      printf("%.8X %.8X\n", cipherTxt[0], cipherTxt[1]);
+      printf("[CIPHER HEX] %.8X %.8X\n", cipherTxt[0], cipherTxt[1]);
       
       #if 1  // Decryption
         decrypt(cipherTxt, plainTxt);
-        printf("[PLAIN HEX] %.8X %.8X\n", plainTxt[0], plainTxt[1]);
+        printf("[PLAIN HEX ] %.8X %.8X\n\n", plainTxt[0], plainTxt[1]);
       #endif
 
       plainTxt[0] = 0; 
       plainTxt[1] = 0;
     }
       
-    --i;
+    ++i;
   }
 
   // Encrypt any remaining characters
   if (cnt % 8 != 0) {
     encrypt(plainTxt, cipherTxt);
-    printf("%.8X %.8X\n", cipherTxt[0], cipherTxt[1]);
+    printf("[CIPHER HEX] %.8X %.8X\n", cipherTxt[0], cipherTxt[1]);
 
     #if 1  // Decryption
       decrypt(cipherTxt, plainTxt);
-      printf("[PLAIN HEX] %.8X %.8X\n", plainTxt[0], plainTxt[1]);
+      printf("[PLAIN HEX ] %.8X %.8X\n\n", plainTxt[0], plainTxt[1]);
     #endif
   }
 
@@ -161,7 +160,8 @@ void setup(unsigned char *K) {
   int i, j, h; 
  
   // Copy secret key into L
-  for(i = b-1, L[c-1]=0; i != -1; --i) 
+  //for(i = b-1, L[c-1]=0; i != -1; --i)
+  for(i = b-1; i != -1; --i)  
     L[i/u] = (L[i/u] << 8) + K[i];
     //L[i/u] = ROTATE_L(L[i/u], 8) + K[i];
 
@@ -224,9 +224,9 @@ void decrypt(WORD *cipherTxt, WORD *plainTxt) {
  *  IMPORTANT: Make sure that parameter source len is <= 2*b. 
  */
 
-void setHexKey(char *source) {
+void setHexKey(unsigned char *source) {
   
-    char target[2*b];
+    unsigned char target[2*b];
     char *p = target;
     int i, j, offset;
  
@@ -234,13 +234,13 @@ void setHexKey(char *source) {
 
     for ( i = 0; i < 2*b; ++i)
       target[i] = '0'; 
-
+ 
     for ( i = j = 0; i + offset < 2*b; ++i, ++j)
       target[i + offset] = source[j];
 
     for(i = 0; i < b; ++i) {
         sscanf(p, "%2hhx", &K[i]);
-        p += 2 * sizeof(char);
+        p += 2 * sizeof(unsigned char);
     }
 }
 
